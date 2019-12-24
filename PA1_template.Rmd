@@ -5,21 +5,139 @@ output:
     keep_md: true
 ---
 
+```{r}
+library(tidyverse)
+library(ggthemes)
+library(mice)
+```
 
 ## Loading and preprocessing the data
-
+```{r}
+data <- read.csv('activity.csv', sep=",")
+data$date <- as.Date(data$date)
+```
 
 
 ## What is mean total number of steps taken per day?
+```{r}
+data.steps <- data %>%
+  group_by(date) %>%
+  summarise(steps.p.day = sum(steps))
+  
+ggplot(data.steps, aes(x=steps.p.day)) +
+  geom_histogram(bins=20) +
+  ggtitle("Total Number of Steps Per Day") + 
+  xlab("Steps Per Day") + 
+  ylab("Frequency") +
+  theme_minimal()
+```
 
+```{r}
+data %>%
+  group_by(date) %>%
+  summarise(mean.b.date = mean(steps, na.rm = TRUE)) %>%
+  summarise(mean = mean(mean.b.date, na.rm = TRUE))
+```
 
+```{r}
+data %>%
+  group_by(date) %>%
+  summarise(median.b.date = median(steps, na.rm = TRUE)) %>%
+  summarise(median = median(median.b.date, na.rm = TRUE))
+```
 
 ## What is the average daily activity pattern?
+```{r}
+data.steps <- data %>%
+  group_by(date) %>%
+  summarise(mean = mean(steps, na.rm = TRUE))
 
+ggplot(data.steps, aes(x=date, y=mean)) +
+  geom_line() +
+  ggtitle("Mean Steps / Date") + 
+  xlab("Date") + 
+  ylab("Mean Steps") +
+  theme_minimal()
+```
+
+```{r}
+data %>%
+  group_by(interval) %>%
+  summarise(mean = mean(steps, na.rm = TRUE)) %>%
+  filter(mean == max(mean))
+```
 
 
 ## Imputing missing values
+```{r}
+sum(is.na(data))
+```
 
+```{r}
+imputes <- mice(data)
+data.imp <- complete(imputes,5)
+```
 
+```{r}
+data.steps <- data.imp %>%
+  group_by(date) %>%
+  summarise(steps.p.day = sum(steps))
+  
+ggplot(data.steps, aes(x=steps.p.day)) +
+  geom_histogram(bins=20) +
+  ggtitle("Total Number of Steps Per Day") + 
+  xlab("Steps Per Day") + 
+  ylab("Frequency") +
+  theme_minimal()
+```
+
+```{r}
+data.steps <- data.imp %>%
+  group_by(date) %>%
+  summarise(mean = mean(steps, na.rm = TRUE))
+
+ggplot(data.steps, aes(x=date, y=mean)) +
+  geom_line() +
+  ggtitle("Mean Steps / Date") + 
+  xlab("Date") + 
+  ylab("Mean Steps") +
+  theme_minimal()
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+activity <- data.imp %>% 
+  mutate(weekday = weekdays(date)) %>%
+    mutate(weekend = ifelse(weekday == "Saturday" | weekday == "Sunday", "Weekend", "Weekday"))
+```
+
+```{r}
+activity %>% 
+  group_by(weekend, interval) %>% 
+  mutate(mean = mean(steps)) %>%
+  ggplot(aes(x = interval, y = mean)) + geom_line() +
+  facet_wrap(~weekend) +
+  ggtitle("Mean Steps by Interval: Weekday vs. Weekend") + 
+  xlab("Interval") + 
+  ylab("Mean Steps") +
+  theme_minimal()
+
+activity %>% 
+  group_by(weekday, interval) %>% 
+  mutate(mean = mean(steps)) %>%
+  ggplot(aes(x = interval, y = mean)) + geom_line() +
+  facet_wrap(~weekday) +
+  ggtitle("Mean Steps by Interval: Weekday vs. Weekend") + 
+  xlab("Interval") + 
+  ylab("Mean Steps") +
+  theme_minimal()
+```
+
+
+
+
+
+
+
+
+
